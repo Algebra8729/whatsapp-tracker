@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+WhatsApp_Audit_Profile/
+status_history.json
+.env

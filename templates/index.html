@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Privacy Auditor | SecOps Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&display=swap');
+        
+        body {
+            background-color: #0a0a0c;
+            color: #d1d5db;
+            font-family: 'Fira Code', monospace;
+        }
+
+        .glass-panel {
+            background: rgba(17, 24, 39, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+        }
+
+        .status-pulse {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .online { background: #10b981; box-shadow: 0 0 15px #10b981; }
+        .offline { background: #ef4444; box-shadow: 0 0 15px #ef4444; }
+
+        .terminal-log {
+            background: #000;
+            border: 1px solid #1f2937;
+            height: 200px;
+            overflow-y: auto;
+            padding: 10px;
+            font-size: 0.85rem;
+            color: #34d399;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-10">
+
+    <div class="max-w-6xl mx-auto">
+        <header class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
+            <div>
+                <h1 class="text-2xl font-bold text-white tracking-tighter">W-AUDITOR <span class="text-blue-500">v2.0</span></h1>
+                <p class="text-xs text-gray-500 uppercase tracking-widest">Metadata Exposure Analysis Tool</p>
+            </div>
+            
+            <div class="flex gap-3">
+                <input type="text" id="targetName" placeholder="Identifiant cible..." 
+                    class="bg-gray-900 border border-gray-700 text-white px-4 py-2 rounded focus:outline-none focus:border-blue-500 transition-all">
+                <button onclick="toggleAudit(this)" id="auditBtn"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-bold transition-all">
+                    START RECON
+                </button>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div class="glass-panel p-6 col-span-1">
+                <h3 class="text-gray-400 text-sm mb-4 italic">// CURRENT_STATE</h3>
+                <div class="flex items-center">
+                    <span id="statusLed" class="status-pulse offline"></span>
+                    <span id="statusText" class="text-2xl font-bold uppercase">Standby</span>
+                </div>
+                <p id="targetDisplay" class="text-xs mt-4 text-gray-500 italic">Aucune cible active</p>
+            </div>
+
+            <div class="glass-panel p-6 col-span-2">
+                <h3 class="text-gray-400 text-sm mb-4 italic">// AUDIT_STATS</h3>
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <span class="block text-gray-500 text-xs">ONLINE_RATIO</span>
+                        <span id="onlineRatio" class="text-xl font-bold text-blue-400">0%</span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500 text-xs">SESSIONS_COUNT</span>
+                        <span id="sessionCount" class="text-xl font-bold text-white">0</span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500 text-xs">LAST_ACTIVITY</span>
+                        <span id="lastTime" class="text-xl font-bold text-gray-300">--:--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="glass-panel p-6">
+                <h3 class="text-gray-400 text-sm mb-6 italic">// ACTIVITY_TIMELINE</h3>
+                <canvas id="timelineChart" height="200"></canvas>
+            </div>
+            
+            <div class="glass-panel p-6">
+                <h3 class="text-gray-400 text-sm mb-6 italic">// RAW_RECON_LOGS</h3>
+                <div id="terminal" class="terminal-log">
+                    [SYSTEM] Prêt pour l'acquisition de données...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isAuditing = false;
+        let chart = null;
+
+        function logToTerminal(msg) {
+            const term = document.getElementById('terminal');
+            const time = new Date().toLocaleTimeString();
+            term.innerHTML += `<div><span class="text-gray-600">[${time}]</span> ${msg}</div>`;
+            term.scrollTop = term.scrollHeight;
+        }
+
+        async function toggleAudit(btn) {
+            const name = document.getElementById('targetName').value;
+            if(!name) return alert("Cible requise");
+
+            if(!isAuditing) {
+                // Simulation démarrage (à lier à ton app.py)
+                isAuditing = true;
+                btn.innerHTML = "STOP AUDIT";
+                btn.classList.replace('bg-blue-600', 'bg-red-600');
+                logToTerminal(`Initialisation de l'audit pour : ${name}...`);
+                document.getElementById('targetDisplay').innerText = `Target: ${name}`;
+                startPolling(name);
+            } else {
+                location.reload(); // Hard reset
+            }
+        }
+
+        function startPolling(name) {
+            setInterval(async () => {
+                try {
+                    const res = await fetch(`/get_status/${name}`);
+                    const data = await res.json();
+                    
+                    if(data.current) {
+                        const isOnline = data.current === "Online";
+                        document.getElementById('statusLed').className = `status-pulse ${isOnline ? 'online' : 'offline'}`;
+                        document.getElementById('statusText').innerText = data.current;
+                        logToTerminal(`Signal reçu : ${data.current}`);
+                    }
+                } catch(e) {}
+            }, 5000);
+        }
+
+        // Initialisation Chart (Style Cyber)
+        const ctx = document.getElementById('timelineChart').getContext('2d');
+        chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Activity',
+                    data: [],
+                    borderColor: '#3b82f6',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true,
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)'
+                }]
+            },
+            options: {
+                plugins: { legend: { display: false } },
+                scales: { 
+                    x: { display: false },
+                    y: { grid: { color: '#1f2937' }, ticks: { display: false } }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
