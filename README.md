@@ -1,6 +1,6 @@
 # 🕵️‍♂️ WhatsApp-Forensics-PoC
 
-> **Note :** Ce projet a été développé pour l'audit de sécurité des communications internes (Le Meurice SecOps).
+> **Note :** Ce projet a été développé à des fins éducatives.
 
 ## 🧪 Le Concept
 Contrairement aux outils classiques, ce script utilise des **Shadow Selectors** et des techniques de **Bypass de détection Webdriver** pour observer les fuites de métadonnées sans alerter les systèmes de sécurité de la plateforme.
