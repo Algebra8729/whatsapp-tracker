@@ -17,3 +17,4 @@ Contrairement aux outils classiques, ce script utilise des **Shadow Selectors** 
 
 ## 🛡️ Défense
 Pour vous protéger contre ce type d'audit, désactivez les options "Vu à" et "En ligne" dans vos paramètres de confidentialité.
+For Educational and Professional Audit Purposes Only
